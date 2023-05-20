@@ -297,13 +297,22 @@ int main(int argc, char *argv[])
 	CURL *curl;
 	CURLcode res;
 	curl_global_init(CURL_GLOBAL_DEFAULT);
-	
+	char errbuf[CURL_ERROR_SIZE];
+
 	curl = curl_easy_init();
-  
+
 	if(curl) {
 		curl_easy_setopt(curl, CURLOPT_URL, server_address); 
 		curl_easy_setopt(curl, CURLOPT_HTTP09_ALLOWED, 1L);
-			/* keep reconnecting */ 	
+			/* provide a buffer to store errors in */
+			curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errbuf);
+			errbuf[0] = 0;
+
+			struct curl_slist *dns;
+			dns = curl_slist_append(NULL, "buildroot:8089:127.0.0.1");
+			curl_easy_setopt(curl, CURLOPT_RESOLVE, dns);
+
+			/* keep reconnecting */
 			curl_easy_setopt(curl, CURLOPT_SSLCERTTYPE, "PEM");
 			curl_easy_setopt(curl, CURLOPT_SSLCERT, client_cert);
 			if(client_key_password) {
@@ -316,7 +325,13 @@ int main(int argc, char *argv[])
 			curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
 			res = curl_easy_perform(curl);
 			if(res != CURLE_OK) {
-				log_error("[%d] curl_easy_perform() failed: %s ",getpid(),curl_easy_strerror(res));
+
+			size_t len = strlen(errbuf);
+    			fprintf(stderr, "\nlibcurl: (%d) ", res);
+    			if(len)
+      				fprintf(stderr, "%s%s", errbuf,
+              			((errbuf[len - 1] != '\n') ? "\n" : ""));
+				// log_error("[%d] curl_easy_perform() failed: %s ",getpid(),curl_easy_strerror(res));
 			}
 			log_info("[%d] Disconnected, will try re-connect in 5 s ",getpid());			
 			sleep(5);
