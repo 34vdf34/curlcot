@@ -247,6 +247,8 @@ int main(int argc, char *argv[])
 	char *client_key="";
 	char *client_key_password="";
 	char *ca_cert="";
+	char *cn_override_to_localhost="";
+	char *port_override_to_localhost="";
 	int c=0;
 	int log_level=LOG_INFO;
 	
@@ -288,6 +290,8 @@ int main(int argc, char *argv[])
 	ini_sget(config, "curlcot", "client_key", NULL, &client_key);
 	ini_sget(config, "curlcot", "client_key_password", NULL, &client_key_password);
 	ini_sget(config, "curlcot", "ca_cert", NULL, &ca_cert);
+	ini_sget(config, "curlcot", "cn_override_to_localhost", NULL, &cn_override_to_localhost);
+	ini_sget(config, "curlcot", "port_override_to_localhost", NULL, &port_override_to_localhost); 
 	log_info("[%d] Server address: %s ",getpid(),server_address);
 	log_info("[%d] Client cert %s",getpid(),client_cert);
 	log_info("[%d] Client key: %s",getpid(),client_key);
@@ -309,7 +313,11 @@ int main(int argc, char *argv[])
 			errbuf[0] = 0;
 
 			struct curl_slist *dns;
-			dns = curl_slist_append(NULL, "buildroot:8089:127.0.0.1");
+			char dns_override_entry[256];
+			memset(dns_override_entry,0,256);
+			sprintf(dns_override_entry, "%s:%s:127.0.0.1",cn_override_to_localhost,port_override_to_localhost);
+			
+			dns = curl_slist_append(NULL, dns_override_entry);
 			curl_easy_setopt(curl, CURLOPT_RESOLVE, dns);
 
 			/* keep reconnecting */
